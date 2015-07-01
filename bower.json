@@ -1,5 +1,5 @@
 {
-  "name": "Angular PushWosh",
+  "name": "Angular PushWoosh",
   "version": "1.0.0",
   "main": "dist/angular-pushwoosh.js",
   "ignore": [
@@ -13,11 +13,12 @@
     "test",
     "tests"
   ],
-  "homepage": "https://github.com/t4deu/angular-pushwoosh",
+  "homepage": "https://github.com/vespoli/angular-pushwoosh.git",
   "authors": [
-    "Tadeu Valentt <tadeu.valentt@gmail.com>"
+    "Tadeu Valentt <tadeu.valentt@gmail.com>",
+    "David Vespoli <hi@davidvespoli.com>"
   ],
-  "description": "Pushwoosh integration module",
+  "description": "Pushwoosh integration module for cordova",
   "moduleType": [
     "globals"
   ],
