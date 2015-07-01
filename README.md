@@ -5,7 +5,7 @@ A pushwoosh integration module for angular
 
 Usage example:
 
-    angular.module('app', ['angular-pushwoosh'])
+    angular.module('app', ['pushwooshNotification'])
     .config(function($pushNotificationProvider) {
       $pushNotificationProvider.register({
         appId: '0EF2C-CCCFD',
