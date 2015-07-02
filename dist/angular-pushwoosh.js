@@ -1,10 +1,9 @@
-//derived from https://github.com/t4deu/angular-pushwoosh
 
 (function(angular) {
   'use strict';
   angular.module('pushwooshNotification', [])
   .provider('$pushNotification', function() {
-    var isRegistered = false;
+
     var settings = {
       appId: null,
       appName: null,
@@ -22,20 +21,23 @@
       }
     };
     var api = {
+      isRegistered: false,
       isAvailable: function() {
         return (typeof window.plugins !== 'undefined')
                 && (typeof window.plugins.pushNotification !== 'undefined');
       },
-      setTags: function(subscriptions) {
-        if (isRegistered) {          
-          var pushNotification = cordova.require("com.pushwoosh.plugins.pushwoosh.PushNotification");          
+      setTags: function(subscriptions, callback) {
+        try {       
+          var pushNotification = cordova.require('com.pushwoosh.plugins.pushwoosh.PushNotification');          
           pushNotification.setTags(subscriptions, function (status) {
-            console.warn("Tags set.");
+            console.warn('Tags set.');
+            if(callback && typeof callback === 'function'){callback();}
           }, function (status) {
-            console.warn("Tags not set.");
+            console.warn('Tags not set.');
           });
-        } else {
-          console.log('not registered');
+        } catch(err) {
+          console.warn(err.message);
+          console.warn('Tags not set. api.isRegistered currently set to : ' + api.isRegistered);
         }
       }
     };    
@@ -44,64 +46,47 @@
       try {
         //set push notifications handler
         document.addEventListener('push-notification', function(e) {
-          console.log(JSON.stringify(e.notification));
+          console.warn('Push Notification Event: ' + JSON.stringify(e.notification));
           if (settings.onPushNotification)          
            settings.onPushNotification(e);
         });
+        
+        if (device.platform == "Android") {
+          api.pushNotification.onDeviceReady(params);
+          api.pushNotification.registerDevice(
+            function (token) {
+              api.isRegistered = true;
+              if(callback && typeof callback === 'function'){callback();}
+              console.warn("Device registered: " + JSON.stringify(token));
+            },
+            function (status) {
+              console.warn("Registration error: " + JSON.stringify(status));
+            }
+          );
+        }
 
-        //start register
-        console.log('try to register for push');
-        //api.pushNotification.onDeviceReady(params);
-
-        api.pushNotification.registerDevice(function(status) {
-          var pushNotification = cordova.require("com.pushwoosh.plugins.pushwoosh.PushNotification");
-
-          if (device.platform == "Android") {
-            pushNotification.onDeviceReady({ projectid: settings.gcmProjectNumber, appid: settings.appId });
-            pushNotification.registerDevice(
-              function (token) {
-                isRegistered = true;
-                console.warn("Device registered: " + JSON.stringify(token));
-              },
-              function (status) {
-                console.warn("Registration error: " + JSON.stringify(status));
-              }
-            );
-          }
-
-          if (device.platform == "iPhone" || device.platform == "iOS") {
-            pushNotification.onDeviceReady({ pw_appid: settings.appId });
-            pushNotification.registerDevice(
-              function (status) {
-                isRegistered = true;
-                console.warn("Device registered: " + JSON.stringify(status));
-              },
-              function (status) {
-                console.warn('Registration error:' + JSON.stringify(status));
-              }
-            );
-            pushNotification.setApplicationIconBadgeNumber(0);
-          }
-
-        });
+        if (device.platform == "iPhone" || device.platform == "iOS") {
+          api.pushNotification.onDeviceReady(params);
+          api.pushNotification.registerDevice(
+            function (status) {
+              api.isRegistered = true;
+              if(callback && typeof callback === 'function'){callback();}
+              console.warn("Device registered: " + JSON.stringify(status));
+            },
+            function (status) {
+              console.warn('Registration error:' + JSON.stringify(status));
+            }
+          );
+          api.pushNotification.setApplicationIconBadgeNumber(0);
+        }
 
       } catch(err) {
         console.log(err.message);
       }
     };
 
-    var unregisterPushwoosh = function() {
-      var pushNotification = cordova.require("com.pushwoosh.plugins.pushwoosh.PushNotification");
-      pushNotification.unregisterDevice(function (status) {
-        isRegistered = false;
-        console.warn("Device unregistered: " + JSON.stringify(status));
-      },
-      function (status) {
-        console.warn('Unregistration error:' + JSON.stringify(status));
-      });
-    }
 
-    this.register = function(params) {
+    this.register = function(params, callback) {
       if(!window.cordova){return;}
       angular.extend(settings, params);
       try {
@@ -109,26 +94,26 @@
         registerSettings.android.appid = settings.appId;
         registerSettings.ios.pw_appid = settings.appId;
 
-        console.log(JSON.stringify(settings));
         var init = function(){
-          api.pushNotification = api.isAvailable() ? window.plugins.pushNotification : null;
-          // console.log('is available', api.isAvailable());
+          api.pushNotification = api.isAvailable() ? cordova.require("com.pushwoosh.plugins.pushwoosh.PushNotification") : null;
           if(device.platform == "Android") {
-            registerPushwoosh(registerSettings.android);
+            registerPushwoosh(registerSettings.android, callback);
           }
           if(device.platform == "iPhone" || device.platform == "iOS") {
-            registerPushwoosh(registerSettings.ios);
+            registerPushwoosh(registerSettings.ios, callback);
           }
-        }
+        };
+
         if (api.isAvailable()) {
           init();
         } else {
-          document.addEventListener('deviceready', init, false)
+          document.addEventListener('deviceready', init, false);
         }
       } catch(err) {
         console.log(err.message);
       }
     };
+
 
     this.$get = function() {
       return api; 
